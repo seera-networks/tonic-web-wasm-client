@@ -11,7 +11,11 @@ use http::{header::HeaderName, HeaderMap, HeaderValue};
 use http_body::Body;
 use httparse::{Status, EMPTY_HEADER};
 use pin_project::pin_project;
+#[cfg(feature = "pyodide-js")]
+use pyo3::{types::PyAny, Py};
+#[cfg(feature = "js")]
 use wasm_bindgen::JsCast;
+#[cfg(feature = "js")]
 use web_sys::ReadableStream;
 
 use crate::{body_stream::BodyStream, content_type::Encoding, Error};
@@ -118,9 +122,26 @@ pub struct ResponseBody {
 }
 
 impl ResponseBody {
+    #[cfg(all(feature = "js", not(feature = "pyodide-js")))]
     pub(crate) fn new(body_stream: ReadableStream, content_type: &str) -> Result<Self, Error> {
         let body_stream =
             wasm_streams::ReadableStream::from_raw(body_stream.unchecked_into()).into_stream();
+
+        Ok(Self {
+            body_stream: BodyStream::new(body_stream),
+            buf: EncodedBytes::new(content_type)?,
+            incomplete_data: BytesMut::new(),
+            data: None,
+            trailer: None,
+            state: ReadState::CompressionFlag,
+            finished_stream: false,
+        })
+    }
+
+    #[cfg(all(feature = "pyodide-js", not(feature = "js")))]
+    pub(crate) fn new(reader: Py<PyAny>, content_type: &str) -> Result<Self, Error> {
+        let body_stream =
+            pyodide_js_stream::ReadableStream::new(reader).map_err(Error::py_error)?;
 
         Ok(Self {
             body_stream: BodyStream::new(body_stream),

@@ -1,7 +1,11 @@
 use http::header::{InvalidHeaderName, InvalidHeaderValue, ToStrError};
+#[cfg(feature = "js")]
 use js_sys::Object;
 use thiserror::Error;
+#[cfg(feature = "js")]
 use wasm_bindgen::{JsCast, JsValue};
+#[cfg(feature = "pyodide-js")]
+use pyo3::PyErr;
 
 /// Error type for `tonic-web-wasm-client`
 #[derive(Debug, Error)]
@@ -27,9 +31,14 @@ pub enum Error {
     /// Invalid header value
     #[error("invalid header value")]
     InvalidHeaderValue(#[from] InvalidHeaderValue),
+    #[cfg(feature = "js")]
     /// JS API error
     #[error("js api error: {0}")]
     JsError(String),
+    #[cfg(feature = "pyodide-js")]
+    /// Python API error
+    #[error("py api error: {0}")]
+    PyError(String),
     /// Malformed response
     #[error("malformed response")]
     MalformedResponse,
@@ -45,13 +54,21 @@ pub enum Error {
 }
 
 impl Error {
+    #[cfg(feature = "js")]
     /// Initialize js error from js value
     pub(crate) fn js_error(value: JsValue) -> Self {
         let message = js_object_display(&value);
         Self::JsError(message)
     }
+
+    #[cfg(feature = "pyodide-js")]
+    /// Initialize py error from PyErr
+    pub(crate) fn py_error(value: PyErr) -> Self {
+        Self::PyError(value.to_string())
+    }
 }
 
+#[cfg(feature = "js")]
 fn js_object_display(option: &JsValue) -> String {
     let object: &Object = option.unchecked_ref();
     ToString::to_string(&object.to_string())

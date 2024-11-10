@@ -39,12 +39,14 @@
 //! target = "wasm32-unknown-unknown"
 //! ```
 mod body_stream;
-mod call;
 mod client;
 mod content_type;
 mod error;
-mod fetch;
-pub mod options;
+#[cfg(feature = "js")]
+mod js;
+#[cfg(feature = "pyodide-js")]
+mod pyodide_js;
+// pub mod options;
 mod response_body;
 
 pub use self::{client::Client, error::Error, response_body::ResponseBody};

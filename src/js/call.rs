@@ -9,7 +9,7 @@ use tonic::body::BoxBody;
 use wasm_bindgen::JsValue;
 use web_sys::{Headers, RequestCredentials, RequestInit};
 
-use crate::{fetch::fetch, options::FetchOptions, Error, ResponseBody};
+use crate::{js::fetch::fetch, options::FetchOptions, Error, ResponseBody};
 
 pub async fn call(
     mut base_url: String,
